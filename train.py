@@ -54,6 +54,7 @@ for epoch in range(configs.epochs):
         data.to(configs.device)
         label.to(configs.device)
 
+    """
         preds = model(data)
 
         #print(preds.shape)
@@ -66,7 +67,8 @@ for epoch in range(configs.epochs):
         losses.append(loss.item())
 
     print(np.mean(losses[-5]))
-        
+    """
+
     if epoch % 1 == 0:
         model.eval()
 
@@ -82,27 +84,27 @@ for epoch in range(configs.epochs):
                 preds = model(data)
 
                 preds = torch.argmax(preds, dim=1)
-                
+
                 for idx in range(configs.num_classes):
-                    
+
                     correct[idx] += torch.sum((preds == label) * (label == (torch.ones(label.shape[0]) * idx)))
                     total[idx] += torch.sum(label == (torch.ones(label.shape[0]) * idx))
-        
+
         for idx in range(configs.num_classes):
             print("Validation Accuracy for Class {}: {}".format(idx, correct[idx] / total[idx]))
-        
+
         mean_acc = np.sum(correct) / np.sum(total)
         print("Mean Validation Accuracy: {}".format(mean_acc))
-        
+
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
             torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_{}.pth'.format(epoch)))
-        
+
         model.train()
-        
+
 np.save(os.path.join(configs.output_dir, 'train_loss.npy'), losses)
-                       
+
 # evaluate on best model:
 
 model = model.load_state_dict(torch.load(configs.model_save_path, configs.model_save_path, 'model_{}.pth'.format(best_epoch)))
@@ -131,4 +133,3 @@ for idx in range(configs.num_classes):
     print("Validation Accuracy for Class {}: {}".format(idx, correct[idx] / total[idx]))
 
 print("Mean Validation Accuracy: {}".format(np.sum(correct) / np.sum(total)))
-        

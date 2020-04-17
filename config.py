@@ -17,12 +17,15 @@ class Config():
         self.num_classes = 8
         self.image_height = 480
         self.image_width = 640
-        self.randomized_background = True
         self.visualize_data = False
+
+        self.randomized_background = True # apply random bg during training
         self.load_into_memory = True # may take a lot of memory
+        # crop to localized objects for easier classification task
+        self.apply_cropping = True
 
         # training
-        
+
         self.batch_size = 16
         self.epochs = 100
         self.lr = 1e-4
