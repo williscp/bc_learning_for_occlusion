@@ -54,7 +54,6 @@ for epoch in range(configs.epochs):
         data.to(configs.device)
         label.to(configs.device)
 
-    """
         preds = model(data)
 
         #print(preds.shape)
@@ -67,7 +66,7 @@ for epoch in range(configs.epochs):
         losses.append(loss.item())
 
     print(np.mean(losses[-5]))
-    """
+
 
     if epoch % 1 == 0:
         model.eval()
