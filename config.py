@@ -29,3 +29,7 @@ class Config():
         self.batch_size = 16
         self.epochs = 100
         self.lr = 1e-4
+
+        # bc learning
+
+        self.bc_mixing_method = 'linear' # linear = linear combination
