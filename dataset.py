@@ -4,7 +4,7 @@ import imghdr
 import numpy as np
 
 from PIL import Image
-from torchvision.transforms import ToTensor, ToPILImage
+from torchvision.transforms import ToTensor, ToPILImage, RandomCrop
 
 def mask_to_bbox(mask):
     rows =  np.where(np.max(mask, axis=1) == 1)[0]
@@ -20,6 +20,23 @@ def mask_to_bbox(mask):
 
     return left, top, right, bottom
 
+def squarify_bbox(image, bbox):
+    W, H  = image.size
+    left, top, right, bottom = bbox
+    x_center = (right + left) / 2
+    y_center = (bottom + top) / 2
+
+    width = right - left
+    height = bottom - top
+
+    if width > height:
+        top = max(0, y_center - width / 2)
+        bottom = min(H, y_center + width / 2)
+    else:
+        left = max(0, x_center - height / 2)
+        right = min(W, x_center + height / 2)
+
+    return left, top, right, bottom
 
 class KOTrainDataset():
 
@@ -104,6 +121,7 @@ class KOTrainDataset():
         if self.apply_cropping:
 
             left, top, right, bottom = mask_to_bbox(np.array(mask_img))
+            left, top, right, bottom = squarify_bbox(img, (left, top, right, bottom))
             img = img.crop((left, top, right, bottom))
             mask_img = mask_img.crop((left, top, right, bottom))
 
@@ -132,8 +150,8 @@ class KOTrainDataset():
             if not self.load_into_memory:
 
                 bg_path = self.background_paths[np.random.randint(0, len(self.backgrounds))]
-                bg_img = bg_img.resize((self.image_width, self.image_height))
                 bg_img = Image.open(bg_path)
+                bg_img = bg_img.resize((self.image_width, self.image_height))
                 bg_tensor = self.totensor(bg_img)
 
             else:
@@ -212,8 +230,10 @@ class KOTestDataset():
     def __getitem__(self, idx):
         img = Image.open(self.data[idx])
         if self.apply_cropping:
-            print(self.bbox[idx])
+            #print(self.bbox[idx])
             left, top, right, bottom = self.bbox[idx]
+            left, top, right, bottom = squarify_bbox(img, (left, top, right, bottom))
+
             img = img.crop((left, top, right, bottom))
         img = img.resize((self.image_height, self.image_width))
 

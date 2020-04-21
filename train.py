@@ -25,7 +25,7 @@ test_loader = torch.utils.data.DataLoader(
     batch_size=8,
     num_workers=8,
     pin_memory=False,
-    shuffle=True,
+    shuffle=False,
     drop_last=True
 )
 
