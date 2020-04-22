@@ -168,7 +168,17 @@ class KOTrainDataset():
             img.save(os.path.join(self.output_dir, 'example_train_image.jpg'))
 
         return img_tensor, self.labels[idx]
-
+    
+        
+    def get_mean(self):
+        
+        if self.load_into_memory:
+            
+            img_mean = torch.mean(torch.stack(self.data))
+            bg_mean = torch.mean(torch.stack(self.backgrounds))
+            
+            return (img_mean + bg_mean) / 2
+        
 class KOTestDataset():
 
     def __init__(self, configs):

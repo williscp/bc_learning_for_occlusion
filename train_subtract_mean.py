@@ -10,6 +10,7 @@ from model.baseline import LinearModel
 configs = Config()
 
 train_set = KOTrainDataset(configs)
+print(train_set.get_mean())
 test_set = KOTestDataset(configs)
 
 train_loader = torch.utils.data.DataLoader(
@@ -49,7 +50,9 @@ best_epoch = 0
 for epoch in range(configs.epochs):
     for batch in train_loader:
         data, label = batch
-
+        
+        data = data - configs.data_mean 
+        
         data.to(configs.device)
         label.to(configs.device)
 
@@ -75,7 +78,9 @@ for epoch in range(configs.epochs):
         with torch.no_grad():
             for batch in test_loader:
                 data, label = batch
-
+                
+                data = data - configs.data_mean 
+                    
                 data.to(configs.device)
                 label.to(configs.device)
 
@@ -97,17 +102,17 @@ for epoch in range(configs.epochs):
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_{}.pth'.format(epoch)))
+            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_sub_mean{}.pth'.format(epoch)))
 
         model.train()
 
-np.save(os.path.join(configs.output_dir, 'train_loss.npy'), losses)
+np.save(os.path.join(configs.output_dir, 'train_sub_mean_loss.npy'), losses)
 
 # evaluate on best model:
 
 print("Best Epoch: {}".format(best_epoch))
 
-model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'model_{}.pth'.format(best_epoch))))
+model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'model_sub_mean{}.pth'.format(best_epoch))))
 
 model.eval()
 
@@ -116,6 +121,7 @@ total = np.zeros(configs.num_classes)
 with torch.no_grad():
     for batch in test_loader:
         data, label = batch
+        data = data - configs.data_mean 
 
         data.to(configs.device)
         label.to(configs.device)

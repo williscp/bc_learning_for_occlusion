@@ -1,9 +1,12 @@
+import torch
+import numpy as np
 from dataset import KOTrainDataset
 
 class BCTrainDataset(KOTrainDataset):
 
     def __init__(self, configs):
-        super(BCTrainDataset, self, configs).__init__()
+        super(BCTrainDataset, self).__init__(configs)
+        self.num_classes = configs.num_classes
         self.bc_mixing_method = configs.bc_mixing_method
 
     def __getitem__(self, idx):
@@ -15,8 +18,8 @@ class BCTrainDataset(KOTrainDataset):
 
         # create the label tensor with mixture ratios as labels
         label_tensor = torch.zeros(self.num_classes, dtype=torch.float)
-        label_tensor[self.label[idx]] += mixture_ratio
-        label_tensor[self.lable[second_idx]] += (1 - mixture_ratio)
+        label_tensor[self.labels[idx]] += mixture_ratio
+        label_tensor[self.labels[second_idx]] += (1 - mixture_ratio)
 
 
         if not self.load_into_memory:
@@ -48,6 +51,18 @@ class BCTrainDataset(KOTrainDataset):
                 mix1 = mixture_ratio * img_tensor * mask_tensor
                 mix2 = (1 - mixture_ratio) * img_tensor2 * mask_tensor
                 masked_object = mix1 + mix2
+                
+            elif self.bc_mixing_method == 'prop':
+                img_tensor = img_tensor * mask_tensor 
+                img_tensor2 = img_tensor2 * mask_tensor 
+                
+                p = 1 / ( 1 + (img_tensor.std() / img_tensor2.std()) * (( 1 - mixture_ratio) / mixture_ratio))
+                mix1 = p * (img_tensor - img_tensor.mean()) 
+                mix2 = (1 - p) * (img_tensor2 - img_tensor2.mean())
+                
+                denom = torch.sqrt(p ** 2 + (1 - p) ** 2)
+                
+                masked_object = (mix1 + mix2) / denom
 
             inverse_mask = torch.ones(mask_tensor.shape, dtype=torch.float) - mask_tensor
             masked_background = bg_tensor * inverse_mask

@@ -33,8 +33,8 @@ test_loader = torch.utils.data.DataLoader(
 #model = LinearModel(configs).to(configs.device)
 
 print("Downloading Model")
-#model = torchvision.models.resnet18(pretrained=False, progress=True, num_classes=configs.num_classes)
-model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
+model = torchvision.models.resnet18(pretrained=False, progress=True, num_classes=configs.num_classes)
+#model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
 
 print("Starting Training")
 optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
@@ -97,17 +97,17 @@ for epoch in range(configs.epochs):
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_{}.pth'.format(epoch)))
+            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_resnet_{}.pth'.format(epoch)))
 
         model.train()
 
-np.save(os.path.join(configs.output_dir, 'train_loss.npy'), losses)
+np.save(os.path.join(configs.output_dir, 'train_resnet_loss.npy'), losses)
 
 # evaluate on best model:
 
 print("Best Epoch: {}".format(best_epoch))
 
-model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'model_{}.pth'.format(best_epoch))))
+model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'model_resnet_{}.pth'.format(best_epoch))))
 
 model.eval()
 

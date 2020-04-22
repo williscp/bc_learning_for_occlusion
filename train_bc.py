@@ -33,6 +33,9 @@ test_loader = torch.utils.data.DataLoader(
 print("Downloading Model")
 
 model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
+
+print("Starting Training")
+optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
 losses = []
 
 correct = np.zeros(configs.num_classes)
@@ -49,8 +52,10 @@ for epoch in range(configs.epochs):
         label.to(configs.device)
 
         preds = model(data)
-
-        loss = torch.nn.functional.cross_entropy(preds, label)
+        
+        #print(label.type())
+        #print(preds.type())
+        loss = torch.nn.functional.kl_div(preds, label)
 
         optimizer.zero_grad()
         loss.backward()
@@ -97,7 +102,9 @@ np.save(os.path.join(configs.output_dir, 'bc_train_loss.npy'), losses)
 
 # evaluate on best model:
 
-model = model.load_state_dict(torch.load(configs.model_save_path, configs.model_save_path, 'bc_model_{}.pth'.format(best_epoch)))
+print("Best Epoch: {}".format(best_epoch))
+
+model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(best_epoch))))
 
 model.eval()
 
