@@ -4,7 +4,7 @@ class Config():
 
         # environment
 
-        self.device = 'cpu' # 'cpu' or 'cuda' depending on environment
+        self.device = 'cuda' # 'cpu' or 'cuda' depending on environment
 
         # paths:
 
@@ -17,7 +17,7 @@ class Config():
         self.num_classes = 8
         self.image_height = 128
         self.image_width = 128
-        self.visualize_data = True
+        self.visualize_data = False
 
         self.randomized_background = True # apply random bg during training
         self.load_into_memory = True # may take a lot of memory
@@ -27,5 +27,5 @@ class Config():
         # training
 
         self.batch_size = 16
-        self.epochs = 100
+        self.epochs = 10
         self.lr = 1e-4
