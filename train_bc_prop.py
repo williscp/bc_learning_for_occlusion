@@ -55,7 +55,8 @@ for epoch in range(configs.epochs):
         
         #print(label.type())
         #print(preds.type())
-        loss = torch.nn.functional.kl_div(preds, label)
+        preds = torch.nn.functional.log_softmax(preds, dim=1)
+        loss = torch.nn.functional.kl_div(preds, label, reduction='batchmean')
 
         optimizer.zero_grad()
         loss.backward()
