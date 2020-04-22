@@ -4,12 +4,12 @@ import torchvision
 import os
 
 from config import Config
-from dataset import KOTrainDataset, KOTestDataset
-from model.baseline import LinearModel
+from dataset import KOTestDataset
+from bc_dataset import BCTrainDataset
 
 configs = Config()
 
-train_set = KOTrainDataset(configs)
+train_set = BCTrainDataset(configs)
 test_set = KOTestDataset(configs)
 
 train_loader = torch.utils.data.DataLoader(
@@ -30,20 +30,15 @@ test_loader = torch.utils.data.DataLoader(
     drop_last=True
 )
 
-#model = LinearModel(configs).to(configs.device)
-
 print("Downloading Model")
-#model = torchvision.models.resnet18(pretrained=False, progress=True, num_classes=configs.num_classes)
-model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
 
-print("Starting Training")
-optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
+model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
 losses = []
 
 correct = np.zeros(configs.num_classes)
 total = np.zeros(configs.num_classes)
 
-best_acc = 0 # best accuracy so far
+best_acc = 0
 best_epoch = 0
 
 for epoch in range(configs.epochs):
@@ -55,8 +50,6 @@ for epoch in range(configs.epochs):
 
         preds = model(data)
 
-        #print(preds.shape)
-
         loss = torch.nn.functional.cross_entropy(preds, label)
 
         optimizer.zero_grad()
@@ -65,7 +58,6 @@ for epoch in range(configs.epochs):
         losses.append(loss.item())
 
     print(np.mean(losses[-5]))
-
 
     if epoch % 1 == 0:
         model.eval()
@@ -97,15 +89,15 @@ for epoch in range(configs.epochs):
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_{}.pth'.format(epoch)))
+            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(epoch)))
 
         model.train()
 
-np.save(os.path.join(configs.output_dir, 'train_loss.npy'), losses)
+np.save(os.path.join(configs.output_dir, 'bc_train_loss.npy'), losses)
 
 # evaluate on best model:
 
-model = model.load_state_dict(torch.load(configs.model_save_path, configs.model_save_path, 'model_{}.pth'.format(best_epoch)))
+model = model.load_state_dict(torch.load(configs.model_save_path, configs.model_save_path, 'bc_model_{}.pth'.format(best_epoch)))
 
 model.eval()
 
