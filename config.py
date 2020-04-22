@@ -33,4 +33,4 @@ class Config():
 
         # bc learning
 
-        self.bc_mixing_method = 'prop' # linear = linear combination # prop = proportional to energies (used in paper)
+        self.bc_mixing_method = 'linear' # linear = linear combination # prop = proportional to energies (used in paper)

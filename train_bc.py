@@ -47,7 +47,9 @@ best_epoch = 0
 for epoch in range(configs.epochs):
     for batch in train_loader:
         data, label = batch
-
+        
+        data = data - configs.data_mean
+        
         data.to(configs.device)
         label.to(configs.device)
 
@@ -55,7 +57,9 @@ for epoch in range(configs.epochs):
         
         #print(label.type())
         #print(preds.type())
-        loss = torch.nn.functional.kl_div(preds, label)
+        preds = torch.nn.functional.log_softmax(preds, dim=1)
+
+        loss = torch.nn.functional.kl_div(preds, label, reduction='batchmean')
 
         optimizer.zero_grad()
         loss.backward()
@@ -72,6 +76,7 @@ for epoch in range(configs.epochs):
         with torch.no_grad():
             for batch in test_loader:
                 data, label = batch
+                data = data - configs.data_mean
 
                 data.to(configs.device)
                 label.to(configs.device)
@@ -113,6 +118,7 @@ total = np.zeros(configs.num_classes)
 with torch.no_grad():
     for batch in test_loader:
         data, label = batch
+        data = data - configs.data_mean
 
         data.to(configs.device)
         label.to(configs.device)
