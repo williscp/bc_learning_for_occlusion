@@ -1,6 +1,8 @@
 import torch
 import numpy as np
+import os
 from dataset import KOTrainDataset
+from mixture.mixture import apply_mixture
 
 class BCTrainDataset(KOTrainDataset):
 
@@ -14,27 +16,38 @@ class BCTrainDataset(KOTrainDataset):
         # generate random other test sample to compare
         # currently this could be of the same class
         second_idx = np.random.randint(0, len(self.labels))
-        mixture_ratio = np.random.random()
-
-        # create the label tensor with mixture ratios as labels
-        label_tensor = torch.zeros(self.num_classes, dtype=torch.float)
-        label_tensor[self.labels[idx]] += mixture_ratio
-        label_tensor[self.labels[second_idx]] += (1 - mixture_ratio)
-
+        
+        label1 = self.labels[idx]
+        label2 = self.labels[second_idx]
 
         if not self.load_into_memory:
-            img_tensor, mask_tensor = self._load_data(self.data_paths[idx], self.mask_paths[idx])
+            img_tensor1, mask_tensor1 = self._load_data(self.data_paths[idx], self.mask_paths[idx])
             img_tensor2, mask_tensor2 = self._load_data(self.data_paths[second_idx], self.mask_paths[second_idx])
         else:
-            mask_tensor = self.masks[idx]
-            img_tensor = self.data[idx]
+            mask_tensor1 = self.masks[idx]
+            img_tensor1 = self.data[idx]
             mask_tensor2 = self.masks[second_idx]
-            img_tensor2 = self.masks[second_idx]
+            img_tensor2 = self.data[second_idx]
+            
+        if self.randomized_background:
+            # Combine segmentation masks by taking element-wise max
+            mask_tensor = torch.max(mask_tensor1, mask_tensor2)
+            img_tensor1 = img_tensor1 * mask_tensor 
+            img_tensor2 = img_tensor2 * mask_tensor
+        
+        #print(img_tensor1.shape)
+        #print(img_tensor2.shape)
+        
+        img_tensor, label_tensor = apply_mixture(
+            self.bc_mixing_method,
+            img_tensor1,
+            img_tensor2,
+            label1,
+            label2,
+            self.num_classes
+        )
 
         if self.randomized_background:
-
-            # Combine segmentation masks by taking element-wise max
-            mask_tensor = torch.max(mask_tensor, mask_tensor2)
 
             if not self.load_into_memory:
 
@@ -45,32 +58,18 @@ class BCTrainDataset(KOTrainDataset):
 
             else:
                 bg_tensor = self.backgrounds[np.random.randint(0, len(self.backgrounds))]
-
-            # apply mixing
-            if self.bc_mixing_method == 'linear':
-                mix1 = mixture_ratio * img_tensor * mask_tensor
-                mix2 = (1 - mixture_ratio) * img_tensor2 * mask_tensor
-                masked_object = mix1 + mix2
                 
-            elif self.bc_mixing_method == 'prop':
-                img_tensor = img_tensor * mask_tensor 
-                img_tensor2 = img_tensor2 * mask_tensor 
-                
-                p = 1 / ( 1 + (img_tensor.std() / img_tensor2.std()) * (( 1 - mixture_ratio) / mixture_ratio))
-                mix1 = p * (img_tensor - img_tensor.mean()) 
-                mix2 = (1 - p) * (img_tensor2 - img_tensor2.mean())
-                
-                denom = torch.sqrt(p ** 2 + (1 - p) ** 2)
-                
-                masked_object = (mix1 + mix2) / denom
+            bg_tensor -= bg_tensor.mean()
 
             inverse_mask = torch.ones(mask_tensor.shape, dtype=torch.float) - mask_tensor
             masked_background = bg_tensor * inverse_mask
 
-            img_tensor = masked_object + masked_background
+            img_tensor = img_tensor + masked_background
 
         if self.visualize_data:
-            img = self.toPIL(img_tensor)
-            img.save(os.path.join(self.output_dir, 'example_train_image.jpg'))
+            img_vis = img_tensor - torch.min(img_tensor)
+            img_vis = img_vis / torch.max(img_vis)
+            img = self.toPIL(img_vis)
+            img.save(os.path.join(self.output_dir, 'example_train_image_{}.jpg'.format(idx)))
 
         return img_tensor, label_tensor

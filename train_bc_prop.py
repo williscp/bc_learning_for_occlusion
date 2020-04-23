@@ -8,6 +8,7 @@ from dataset import KOTestDataset
 from bc_dataset import BCTrainDataset
 
 configs = Config()
+configs.bc_mixing_method = 'prop'
 
 train_set = BCTrainDataset(configs)
 test_set = KOTestDataset(configs)
@@ -47,9 +48,7 @@ best_epoch = 0
 for epoch in range(configs.epochs):
     for batch in train_loader:
         data, label = batch
-        
-        data = data - configs.data_mean
-        
+                
         data.to(configs.device)
         label.to(configs.device)
 
@@ -75,7 +74,6 @@ for epoch in range(configs.epochs):
         with torch.no_grad():
             for batch in test_loader:
                 data, label = batch
-                data = data - configs.data_mean
 
                 data.to(configs.device)
                 label.to(configs.device)
@@ -117,7 +115,6 @@ total = np.zeros(configs.num_classes)
 with torch.no_grad():
     for batch in test_loader:
         data, label = batch
-        data = data - configs.data_mean
 
         data.to(configs.device)
         label.to(configs.device)

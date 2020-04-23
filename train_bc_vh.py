@@ -8,7 +8,7 @@ from dataset import KOTestDataset
 from bc_dataset import BCTrainDataset
 
 configs = Config()
-configs.bc_mixing_method = 'linear'
+configs.bc_mixing_method = 'VH'
 
 train_set = BCTrainDataset(configs)
 test_set = KOTestDataset(configs)
@@ -16,7 +16,7 @@ test_set = KOTestDataset(configs)
 train_loader = torch.utils.data.DataLoader(
     train_set,
     batch_size=configs.batch_size,
-    num_workers=8,
+    num_workers=1, #8,
     pin_memory=False,
     shuffle=True,
     drop_last=True
@@ -48,7 +48,7 @@ best_epoch = 0
 for epoch in range(configs.epochs):
     for batch in train_loader:
         data, label = batch
-               
+                
         data.to(configs.device)
         label.to(configs.device)
 
@@ -57,7 +57,6 @@ for epoch in range(configs.epochs):
         #print(label.type())
         #print(preds.type())
         preds = torch.nn.functional.log_softmax(preds, dim=1)
-
         loss = torch.nn.functional.kl_div(preds, label, reduction='batchmean')
 
         optimizer.zero_grad()
@@ -97,17 +96,17 @@ for epoch in range(configs.epochs):
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(epoch)))
+            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'bc_vh_model_{}.pth'.format(epoch)))
 
         model.train()
 
-np.save(os.path.join(configs.output_dir, 'bc_train_loss.npy'), losses)
+np.save(os.path.join(configs.output_dir, 'bc_vh_train_loss.npy'), losses)
 
 # evaluate on best model:
 
 print("Best Epoch: {}".format(best_epoch))
 
-model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(best_epoch))))
+model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'bc_vh_model_{}.pth'.format(best_epoch))))
 
 model.eval()
 
