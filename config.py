@@ -22,8 +22,10 @@ class Config():
 
         self.randomized_background = True # apply random bg during training
         self.load_into_memory = True # may take a lot of memory
+        
         # crop to localized objects for easier classification task
         self.apply_cropping = True
+        self.data_augmentation = False
 
         # training
         

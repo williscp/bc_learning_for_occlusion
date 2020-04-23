@@ -5,6 +5,17 @@ def apply_mixture(mixing_method, img_tensor1, img_tensor2, label1, label2, num_c
      
     label_tensor = torch.zeros(num_classes, dtype=torch.float)
     
+    if mixing_method == 'double':
+        
+        mixture_ratio = np.random.random()
+
+        label_tensor[label1] += mixture_ratio
+        label_tensor[label2] += (1 - mixture_ratio)
+        
+        mix1 = mixture_ratio * 2 * (img_tensor1 - img_tensor1.mean())
+        mix2 = (1 - mixture_ratio) * 2 * (img_tensor2 - img_tensor2.mean())
+        mixed_tensor = mix1 + mix2
+    
     if mixing_method == 'linear':
         
         mixture_ratio = np.random.random()

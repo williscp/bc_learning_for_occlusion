@@ -2,13 +2,18 @@ import numpy as np
 import torch
 import torchvision
 import os
+import argparse 
 
 from config import Config
 from dataset import KOTestDataset
 from bc_dataset import BCTrainDataset
 
+parser = argparse.ArgumentParser()
+parser.add_argument('mixture_type', choices=['linear', 'double', 'prop', 'VH'], help='method of mixing for BC learning')
+args = parser.parse_args()
+
 configs = Config()
-configs.bc_mixing_method = 'linear'
+configs.bc_mixing_method = args.mixture_type
 
 train_set = BCTrainDataset(configs)
 test_set = KOTestDataset(configs)
@@ -52,12 +57,12 @@ best_epoch = 0
 for epoch in range(configs.epochs):
     for batch in train_loader:
         data, label = batch
-               
+
         data.to(configs.device)
         label.to(configs.device)
 
         preds = model(data)
-        
+
         #print(label.type())
         #print(preds.type())
         preds = torch.nn.functional.log_softmax(preds, dim=1)
@@ -101,18 +106,20 @@ for epoch in range(configs.epochs):
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(epoch)))
+            save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format((args.mixture_type, epoch)))
+            torch.save(model.state_dict(), save_path)
 
         model.train()
     scheduler.step()
 
-np.save(os.path.join(configs.output_dir, 'bc_train_loss.npy'), losses)
+np.save(os.path.join(configs.output_dir, 'bc_{}_train_loss.npy'.format(args.mixture_type)), losses)
 
 # evaluate on best model:
 
 print("Best Epoch: {}".format(best_epoch))
 
-model.load_state_dict(torch.load(os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(best_epoch))))
+save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format((args.mixture_type, epoch)))
+model.load_state_dict(torch.load(os.path.join(configs.model_save_path, save_path)))
 
 model.eval()
 
