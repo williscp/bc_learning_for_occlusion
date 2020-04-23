@@ -38,6 +38,8 @@ model = torchvision.models.resnet18(pretrained=False, progress=True, num_classes
 
 print("Starting Training")
 optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
+if configs.schedule:
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=configs.schedule, gamma=configs.decay)
 losses = []
 
 correct = np.zeros(configs.num_classes)
@@ -49,6 +51,8 @@ best_epoch = 0
 for epoch in range(configs.epochs):
     for batch in train_loader:
         data, label = batch
+        
+        data = data - configs.data_mean
 
         data.to(configs.device)
         label.to(configs.device)
@@ -75,6 +79,8 @@ for epoch in range(configs.epochs):
         with torch.no_grad():
             for batch in test_loader:
                 data, label = batch
+                
+                data = data - configs.data_mean
 
                 data.to(configs.device)
                 label.to(configs.device)
@@ -100,6 +106,7 @@ for epoch in range(configs.epochs):
             torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_resnet_{}.pth'.format(epoch)))
 
         model.train()
+    scheduler.step()
 
 np.save(os.path.join(configs.output_dir, 'train_resnet_loss.npy'), losses)
 
@@ -116,7 +123,9 @@ total = np.zeros(configs.num_classes)
 with torch.no_grad():
     for batch in test_loader:
         data, label = batch
-
+        
+        data = data - configs.data_mean
+            
         data.to(configs.device)
         label.to(configs.device)
 

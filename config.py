@@ -28,9 +28,11 @@ class Config():
         # training
         
         self.batch_size = 16
-        self.epochs = 50
-        self.lr = 1e-4
-
+        self.epochs = 150
+        self.lr = 0.1
+        self.schedule = [50, 90, 120, 140] # or false for no schedule
+        self.decay = 0.1 
+        
         # bc learning
 
         self.bc_mixing_method = 'linear' # linear = linear combination # prop = proportional to energies (used in paper)

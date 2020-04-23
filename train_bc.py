@@ -33,10 +33,14 @@ test_loader = torch.utils.data.DataLoader(
 
 print("Downloading Model")
 
-model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
+model = torchvision.models.resnet18(pretrained=False, progress=True, num_classes=configs.num_classes)
+#model = torchvision.models.mobilenet_v2(pretrained=False, progress=True, num_classes=configs.num_classes)
 
 print("Starting Training")
 optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
+if configs.schedule:
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=configs.schedule, gamma=configs.decay)
+
 losses = []
 
 correct = np.zeros(configs.num_classes)
@@ -100,6 +104,7 @@ for epoch in range(configs.epochs):
             torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'bc_model_{}.pth'.format(epoch)))
 
         model.train()
+    scheduler.step()
 
 np.save(os.path.join(configs.output_dir, 'bc_train_loss.npy'), losses)
 
