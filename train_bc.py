@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torchvision
 import os
-import argparse 
+import argparse
 
 from config import Config
 from dataset import KOTestDataset
@@ -106,7 +106,7 @@ for epoch in range(configs.epochs):
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
-            save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format((args.mixture_type, epoch)))
+            save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format(args.mixture_type, epoch))
             torch.save(model.state_dict(), save_path)
 
         model.train()
@@ -118,7 +118,7 @@ np.save(os.path.join(configs.output_dir, 'bc_{}_train_loss.npy'.format(args.mixt
 
 print("Best Epoch: {}".format(best_epoch))
 
-save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format((args.mixture_type, epoch)))
+save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format(args.mixture_type, epoch))
 model.load_state_dict(torch.load(os.path.join(configs.model_save_path, save_path)))
 
 model.eval()
