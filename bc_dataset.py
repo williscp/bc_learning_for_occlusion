@@ -3,6 +3,8 @@ import numpy as np
 import os
 from dataset import KOTrainDataset
 from mixture.mixture import apply_mixture
+from torchvision.transforms import RandomAffine
+from torchvision.transforms.functional import affine
 
 class BCTrainDataset(KOTrainDataset):
 
@@ -15,10 +17,12 @@ class BCTrainDataset(KOTrainDataset):
 
         # generate random other test sample to compare
         # currently this could be of the same class
-        second_idx = np.random.randint(0, len(self.labels))
-        
         label1 = self.labels[idx]
-        label2 = self.labels[second_idx]
+        label2 = label1
+        
+        while label1 == label2:
+            second_idx = np.random.randint(0, len(self.labels))
+            label2 = self.labels[second_idx]
 
         if not self.load_into_memory:
             img_tensor1, mask_tensor1 = self._load_data(self.data_paths[idx], self.mask_paths[idx])
@@ -28,6 +32,25 @@ class BCTrainDataset(KOTrainDataset):
             img_tensor1 = self.data[idx]
             mask_tensor2 = self.masks[second_idx]
             img_tensor2 = self.data[second_idx]
+            
+        if self.data_augmentation:
+            
+            # augment image 1
+            img1 = self.toPIL(img_tensor1)
+            transform = RandomAffine.get_params(self.aug_rotation, self.aug_translation, self.aug_scale, None, img1.size)
+            
+            img_tensor1 = self.totensor(affine(img1, *transform, resample=False, fillcolor=0))
+            
+            mask_tensor1 = self.totensor(affine(self.toPIL(mask_tensor1), *transform, resample=False, fillcolor=0))
+            
+            # augment image 2
+            
+            img2 = self.toPIL(img_tensor2)
+            transform = RandomAffine.get_params(self.aug_rotation, self.aug_translation, self.aug_scale, None, img2.size)
+            
+            img_tensor2 = self.totensor(affine(img2, *transform, resample=False, fillcolor=0))
+            
+            mask_tensor2 = self.totensor(affine(self.toPIL(mask_tensor2), *transform, resample=False, fillcolor=0))
             
         if self.randomized_background:
             # Combine segmentation masks by taking element-wise max
@@ -53,12 +76,14 @@ class BCTrainDataset(KOTrainDataset):
 
                 bg_path = self.background_paths[np.random.randint(0, len(self.backgrounds))]
                 bg_img = Image.open(bg_path)
-                bg_img = bg_img.resize((self.image_width, self.image_height))
+                #bg_img = bg_img.resize((self.image_width, self.image_height))
                 bg_tensor = self.totensor(bg_img)
 
             else:
                 bg_tensor = self.backgrounds[np.random.randint(0, len(self.backgrounds))]
-                
+            
+            bg_tensor = self.totensor(self.random_crop(self.toPIL(bg_tensor)))
+
             bg_tensor -= bg_tensor.mean()
 
             inverse_mask = torch.ones(mask_tensor.shape, dtype=torch.float) - mask_tensor
@@ -70,6 +95,6 @@ class BCTrainDataset(KOTrainDataset):
             img_vis = img_tensor - torch.min(img_tensor)
             img_vis = img_vis / torch.max(img_vis)
             img = self.toPIL(img_vis)
-            img.save(os.path.join(self.output_dir, 'example_train_image_{}.jpg'.format(idx)))
+            img.save(os.path.join(self.output_dir, 'bc', 'example_train_image_{}.jpg'.format(idx)))
 
         return img_tensor, label_tensor

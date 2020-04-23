@@ -4,7 +4,8 @@ import imghdr
 import numpy as np
 
 from PIL import Image
-from torchvision.transforms import ToTensor, ToPILImage, RandomCrop
+from torchvision.transforms import ToTensor, ToPILImage, RandomCrop, RandomAffine
+from torchvision.transforms.functional import affine
 
 def mask_to_bbox(mask):
     rows =  np.where(np.max(mask, axis=1) == 1)[0]
@@ -52,6 +53,11 @@ class KOTrainDataset():
         self.load_into_memory = configs.load_into_memory
         self.apply_cropping = configs.apply_cropping
         self.device = configs.device
+        self.data_augmentation = configs.data_augmentation
+        
+        self.aug_rotation = (-5, 5) # (min, max) rotational degrees 
+        self.aug_translation = (0.05, 0.05) # (x, y) max proportional translation
+        self.aug_scale = (0.9, 1.1) # (min, max) scale 
 
         self.data_paths = [] # store paths to images
         self.data = [] # store image tensors
@@ -65,6 +71,7 @@ class KOTrainDataset():
 
         self.totensor = ToTensor() # for converting PIL Image to pytorch Tensors
         self.toPIL = ToPILImage()
+        self.random_crop = RandomCrop((self.image_height, self.image_width))
 
         train_dir = os.path.join(self.data_dir,'multiple', 'train')
 
@@ -110,7 +117,7 @@ class KOTrainDataset():
 
                 if self.load_into_memory:
                     bg_img = Image.open(bg_path)
-                    bg_img = bg_img.resize((self.image_width, self.image_height))
+                    #bg_img = bg_img.resize((self.image_width, self.image_height))
                     bg_tensor = self.totensor(bg_img)
                     self.backgrounds.append(bg_tensor)
 
@@ -144,6 +151,19 @@ class KOTrainDataset():
         else:
             mask_tensor = self.masks[idx]
             img_tensor = self.data[idx]
+            
+        if self.data_augmentation:
+            
+            img = self.toPIL(img_tensor)
+            transform = RandomAffine.get_params(self.aug_rotation, self.aug_translation, self.aug_scale, None, img.size)
+            
+            img_tensor = self.totensor(affine(img, *transform, resample=False, fillcolor=0))
+            
+            mask_tensor = self.totensor(affine(self.toPIL(mask_tensor), *transform, resample=False, fillcolor=0))
+
+        if self.randomized_background:
+            
+            img_tensor = img_tensor * mask_tensor
 
         if self.randomized_background:
 
@@ -151,21 +171,23 @@ class KOTrainDataset():
 
                 bg_path = self.background_paths[np.random.randint(0, len(self.backgrounds))]
                 bg_img = Image.open(bg_path)
-                bg_img = bg_img.resize((self.image_width, self.image_height))
+                #bg_img = bg_img.resize((self.image_width, self.image_height))
                 bg_tensor = self.totensor(bg_img)
 
             else:
                 bg_tensor = self.backgrounds[np.random.randint(0, len(self.backgrounds))]
-
-            masked_object = img_tensor * mask_tensor
+            
+            bg_tensor = self.totensor(self.random_crop(self.toPIL(bg_tensor)))
             inverse_mask = torch.ones(mask_tensor.shape, dtype=torch.float) - mask_tensor
             masked_background = bg_tensor * inverse_mask
 
-            img_tensor = masked_object + masked_background
-
+            img_tensor = img_tensor + masked_background
+            
         if self.visualize_data:
-            img = self.toPIL(img_tensor)
-            img.save(os.path.join(self.output_dir, 'example_train_image.jpg'))
+            img_vis = img_tensor - torch.min(img_tensor)
+            img_vis = img_vis / torch.max(img_vis)
+            img = self.toPIL(img_vis)
+            img.save(os.path.join(self.output_dir, 'train', 'example_train_image_{}.jpg'.format(idx)))
 
         return img_tensor, self.labels[idx]
     
@@ -227,8 +249,11 @@ class KOTestDataset():
                         bbox_str = stream.readlines()[0]
 
                     x, y, w, h, _ = bbox_str.split(' ')
+                    
+                    w = float(w) / 2
+                    h = float(h) / 2
 
-                    bbox = [float(x), float(y), float(x) + float(w), float(y) + float(h)]
+                    bbox = [float(x) - w, float(y) - h, float(x) + w, float(y) + h]
 
                     self.bbox.append(bbox)
 
@@ -248,6 +273,6 @@ class KOTestDataset():
         img = img.resize((self.image_height, self.image_width))
 
         if self.visualize_data:
-            img.save(os.path.join(self.output_dir, 'example_val_image_{}.jpg'.format(idx)))
+            img.save(os.path.join(self.output_dir, 'val','example_val_image_{}.jpg'.format(idx)))
         img_tensor = self.totensor(img)
         return img_tensor, self.labels[idx]

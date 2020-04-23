@@ -22,15 +22,19 @@ class Config():
 
         self.randomized_background = True # apply random bg during training
         self.load_into_memory = True # may take a lot of memory
+        
         # crop to localized objects for easier classification task
         self.apply_cropping = True
+        self.data_augmentation = False
 
         # training
         
         self.batch_size = 16
-        self.epochs = 50
-        self.lr = 1e-4
-
+        self.epochs = 150
+        self.lr = 0.1
+        self.schedule = [50, 90, 120, 140] # or false for no schedule
+        self.decay = 0.1 
+        
         # bc learning
 
         self.bc_mixing_method = 'linear' # linear = linear combination # prop = proportional to energies (used in paper)
