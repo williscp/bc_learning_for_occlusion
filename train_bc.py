@@ -9,7 +9,7 @@ from dataset import KOTestDataset
 from bc_dataset import BCTrainDataset
 
 parser = argparse.ArgumentParser()
-parser.add_argument('mixture_type', choices=['linear', 'double', 'prop', 'VH'], help='method of mixing for BC learning')
+parser.add_argument('mixture_type', choices=['linear', 'double', 'prop', 'VH', 'Gauss'], help='method of mixing for BC learning')
 args = parser.parse_args()
 
 configs = Config()
