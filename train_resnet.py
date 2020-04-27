@@ -42,6 +42,7 @@ if configs.schedule:
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=configs.schedule, gamma=configs.decay)
 train_losses = []
 val_losses = []
+val_acc = []
 
 correct = np.zeros(configs.num_classes)
 total = np.zeros(configs.num_classes)

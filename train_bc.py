@@ -57,6 +57,8 @@ best_acc = 0
 best_epoch = 0
 
 for epoch in range(configs.epochs):
+    print("Epoch: {}".format(epoch))
+    
     for batch in train_loader:
         data, label = batch
 
@@ -77,7 +79,7 @@ for epoch in range(configs.epochs):
         train_losses.append(loss.item())
 
     print(np.mean(train_losses[-5]))
-
+    
     if epoch % 1 == 0:
         model.eval()
 
@@ -89,10 +91,12 @@ for epoch in range(configs.epochs):
 
                 data.to(configs.device)
                 label.to(configs.device)
+                
+                label = label.float()
 
                 preds = model(data)
-                log_preds = torch.nn.functional.log_softmax(preds, dim=1)
-
+                log_preds = torch.nn.functional.log_softmax(preds, dim=1).float()
+                
                 loss = torch.nn.functional.kl_div(log_preds, label, reduction='batchmean')
                 
                 val_losses.append(loss.item())
