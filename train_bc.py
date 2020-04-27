@@ -46,7 +46,9 @@ optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
 if configs.schedule:
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=configs.schedule, gamma=configs.decay)
 
-losses = []
+train_losses = []
+val_losses = []
+val_acc = []
 
 correct = np.zeros(configs.num_classes)
 total = np.zeros(configs.num_classes)
@@ -72,9 +74,9 @@ for epoch in range(configs.epochs):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        losses.append(loss.item())
+        train_losses.append(loss.item())
 
-    print(np.mean(losses[-5]))
+    print(np.mean(train_losses[-5]))
 
     if epoch % 1 == 0:
         model.eval()
@@ -89,6 +91,11 @@ for epoch in range(configs.epochs):
                 label.to(configs.device)
 
                 preds = model(data)
+                log_preds = torch.nn.functional.log_softmax(preds, dim=1)
+
+                loss = torch.nn.functional.kl_div(log_preds, label, reduction='batchmean')
+                
+                val_losses.append(loss.item())
 
                 preds = torch.argmax(preds, dim=1)
 
@@ -102,24 +109,30 @@ for epoch in range(configs.epochs):
 
         mean_acc = np.sum(correct) / np.sum(total)
         print("Mean Validation Accuracy: {}".format(mean_acc))
+        
+        val_acc.append(mean_acc)
 
         if mean_acc > best_acc:
             best_acc = mean_acc
             best_epoch = epoch
             save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format(args.mixture_type, epoch))
             torch.save(model.state_dict(), save_path)
-
+            
         model.train()
+        
+        np.save(os.path.join(configs.output_dir, 'bc_{}_train_loss.npy'.format(args.mixture_type)), train_losses)
+        np.save(os.path.join(configs.output_dir, 'bc_{}_val_loss.npy'.format(args.mixture_type)), val_losses)
+        np.save(os.path.join(configs.output_dir, 'bc_{}_val_acc.npy'.format(args.mixture_type)), val_acc)
+
     scheduler.step()
 
-np.save(os.path.join(configs.output_dir, 'bc_{}_train_loss.npy'.format(args.mixture_type)), losses)
 
 # evaluate on best model:
 
 print("Best Epoch: {}".format(best_epoch))
 
-save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format(args.mixture_type, epoch))
-model.load_state_dict(torch.load(os.path.join(configs.model_save_path, save_path)))
+save_path = os.path.join(configs.model_save_path, 'bc_{}_model_{}.pth'.format(args.mixture_type, best_epoch))
+model.load_state_dict(torch.load(save_path))
 
 model.eval()
 

@@ -40,7 +40,8 @@ print("Starting Training")
 optimizer = torch.optim.Adam(model.parameters(), lr=configs.lr)
 if configs.schedule:
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=configs.schedule, gamma=configs.decay)
-losses = []
+train_losses = []
+val_losses = []
 
 correct = np.zeros(configs.num_classes)
 total = np.zeros(configs.num_classes)
@@ -66,9 +67,9 @@ for epoch in range(configs.epochs):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        losses.append(loss.item())
+        train_losses.append(loss.item())
 
-    print(np.mean(losses[-5]))
+    print(np.mean(train_losses[-5]))
 
 
     if epoch % 1 == 0:
@@ -86,7 +87,10 @@ for epoch in range(configs.epochs):
                 label.to(configs.device)
 
                 preds = model(data)
-
+                log_preds = model(data)
+                loss = torch.nn.functional.cross_entropy(log_preds, label)
+                
+                val_losses.append(loss.item())
                 preds = torch.argmax(preds, dim=1)
 
                 for idx in range(configs.num_classes):
@@ -104,11 +108,14 @@ for epoch in range(configs.epochs):
             best_acc = mean_acc
             best_epoch = epoch
             torch.save(model.state_dict(), os.path.join(configs.model_save_path, 'model_resnet_{}.pth'.format(epoch)))
-
+        
+        np.save(os.path.join(configs.output_dir, 'resnet_train_loss.npy'), train_losses)
+        np.save(os.path.join(configs.output_dir, 'resnet_val_loss.npy'), val_losses)
+        np.save(os.path.join(configs.output_dir, 'resnet_val_acc.npy'), val_acc)
         model.train()
+        
     scheduler.step()
 
-np.save(os.path.join(configs.output_dir, 'train_resnet_loss.npy'), losses)
 
 # evaluate on best model:
 

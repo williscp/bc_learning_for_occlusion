@@ -25,7 +25,7 @@ class Config():
         
         # crop to localized objects for easier classification task
         self.apply_cropping = True
-        self.data_augmentation = False
+        self.data_augmentation = True
 
         # training
         
